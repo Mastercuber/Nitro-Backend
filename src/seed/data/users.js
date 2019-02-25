@@ -21,7 +21,7 @@ export default function (data) {
       }
       u2: CreateUser(
         id: "u2",
-        name: "Bob der Bausmeister",
+        name: "Bob der Baumeister",
         password: "1234",
         email: "moderator@example.org",
         avatar: "${faker.internet.avatar()}",

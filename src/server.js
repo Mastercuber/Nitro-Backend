@@ -13,6 +13,8 @@ import passport from 'passport'
 import jwtStrategy from './jwt/strategy'
 import jwt from 'jsonwebtoken'
 
+import activityPubServer from './activitypub'
+
 dotenv.config()
 // check env and warn
 const requiredEnvVars = ['MAPBOX_TOKEN', 'JWT_SECRET']
@@ -24,6 +26,7 @@ requiredEnvVars.forEach(env => {
 
 const driver = getDriver()
 const debug = process.env.NODE_ENV !== 'production' && process.env.DEBUG === 'true'
+let activityPub = null
 
 let schema = makeAugmentedSchema({
   typeDefs,
@@ -68,9 +71,13 @@ const createServer = (options) => {
   passport.use('jwt', jwtStrategy(driver))
   server.express.use(passport.initialize())
   server.express.use(express.static('public'))
-
+  activityPub = activityPubServer()
   server.express.post('/graphql', passport.authenticate(['jwt'], { session: false }))
   return server
 }
+process.on(['SIGINT', 'SIGTERM', 'exit'], () => {
+  process.exit(0)
+})
 
 export default createServer
+export { activityPub }

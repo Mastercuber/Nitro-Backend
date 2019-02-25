@@ -8,5 +8,9 @@
         }
       }
     ]
+  ],
+  "plugins": [
+    "@babel/plugin-proposal-throw-expressions",
+    "@babel/plugin-proposal-export-default-from"
   ]
 }

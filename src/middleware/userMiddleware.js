@@ -1,9 +1,16 @@
 import createOrUpdateLocations from './nodes/locations'
 import find from 'lodash/find'
+import { generateRsaKeyPair } from '../activitypub/security'
+import dotenv from 'dotenv'
+import { resolve } from 'path'
+
+dotenv.config({ path: resolve('src', 'activitypub', '.env') })
 
 export default {
   Mutation: {
     CreateUser: async (resolve, root, args, context, info) => {
+      Object.assign(args, generateRsaKeyPair())
+      args.actorId = `${process.env.ACTIVITYPUB_URI}/activitypub/users/${args.slug}`
       const result = await resolve(root, args, context, info)
       await createOrUpdateLocations(args.id, args.locationName, context.driver)
       return result
