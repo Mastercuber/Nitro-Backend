@@ -9,6 +9,7 @@ const factory = Factory()
 describe('Signature creation and verification', () => {
   let user = null
   let client = null
+  const TEST_ALGORITHMS = ['rsa-md4', 'rsa-md5', 'rsa-sha1', 'rsa-sha256', 'rsa-sha512']
   const headers = {
     'Date': '2019-03-08T14:35:45.759Z',
     'Host': 'democracy-app.de',
@@ -17,15 +18,15 @@ describe('Signature creation and verification', () => {
 
   beforeEach(async () => {
     await factory.create('User', {
-      'slug': 'test-user',
-      'name': 'Test User',
+      'slug': 'lea',
+      'name': 'lea',
       'email': 'user@example.org',
       'password': 'swordfish'
     })
     const headers = await login({ email: 'user@example.org', password: 'swordfish' })
     client = new GraphQLClient(host, { headers })
     const result = await client.request(`query {
-      User(slug: "test-user") {
+      User(slug: "lea") {
         privateKey
         publicKey
       }
@@ -38,32 +39,36 @@ describe('Signature creation and verification', () => {
   })
 
   describe('Signature creation', () => {
-    let signatureB64 = ''
-    beforeEach(() => {
-      const signer = crypto.createSign('rsa-sha256')
-      signer.update('(request-target): post /activitypub/users/max/inbox\ndate: 2019-03-08T14:35:45.759Z\nhost: democracy-app.de\ncontent-type: application/json')
-      signatureB64 = signer.sign({ key: user.privateKey, passphrase: 'a7dsf78sadg87ad87sfagsadg78' }, 'base64')
-    })
-    it('creates a Signature with given privateKey, keyId, url and headers (default algorithm: "rsa-sha256")', () => {
-      const httpSignature = createSignature(user.privateKey, 'https://human-connection.org/activitypub/users/lea#main-key', 'https://democracy-app.de/activitypub/users/max/inbox', headers)
-
-      expect(httpSignature).to.contain('keyId="https://human-connection.org/activitypub/users/lea#main-key"')
-      expect(httpSignature).to.contain('algorithm="rsa-sha256"')
-      expect(httpSignature).to.contain('headers="(request-target) date host content-type"')
-      expect(httpSignature).to.contain('signature="' + signatureB64 + '"')
-    })
+    for (let length = TEST_ALGORITHMS.length, index = 0; length > index; index++) {
+      it(`creates a Signature with hashing algorithm -> ${TEST_ALGORITHMS[index]}`, () => {
+        const httpSignature = createSignature(user.privateKey, 'https://human-connection.org/activitypub/users/lea#main-key', 'https://democracy-app.de/activitypub/users/max/inbox', headers, TEST_ALGORITHMS[index])
+        console.log(`http signature = ${httpSignature}`)
+        assertKeys(TEST_ALGORITHMS[index], createSignatureToAssert(TEST_ALGORITHMS[index], user.privateKey), httpSignature)
+      })
+    }
   })
 
   describe('Signature verification', () => {
-    let httpSignature = ''
-    beforeEach(() => {
-      httpSignature = createSignature(user.privateKey, 'http://localhost:4001/activitypub/users/test-user#main-key', 'https://democracy-app.de/activitypub/users/max/inbox', headers)
-    })
-
-    it('verifies a Signature correct', async () => {
-      headers['Signature'] = httpSignature
-      const isVerified = await verifySignature('https://democracy-app.de/activitypub/users/max/inbox', headers)
-      expect(isVerified).to.equal(true)
-    })
+    for (let length = TEST_ALGORITHMS.length, index = 0; length > index; index++) {
+      it(`verifies a Signature hashed with algorithm -> ${TEST_ALGORITHMS[index]}`, async () => {
+        const signatureB64 = createSignatureToAssert(TEST_ALGORITHMS[index], user.privateKey)
+        headers['Signature'] = `keyId="http://localhost:4123/activitypub/users/lea",algorithm="${TEST_ALGORITHMS[index]}",headers="(request-target) date host content-type",signature="${signatureB64}"`
+        const isVerified = await verifySignature('https://democracy-app.de/activitypub/users/max/inbox', headers)
+        expect(isVerified).to.equal(true)
+      })
+    }
   })
 })
+
+function assertKeys (algorithm, signatureB64, httpSignature) {
+  expect(httpSignature).to.contain('keyId="https://human-connection.org/activitypub/users/lea#main-key"')
+  expect(httpSignature).to.contain('algorithm="' + algorithm + '"')
+  expect(httpSignature).to.contain('headers="(request-target) date host content-type"')
+  expect(httpSignature).to.contain('signature="' + signatureB64 + '"')
+}
+
+function createSignatureToAssert (algorithm, privateKey) {
+  const signer = crypto.createSign(algorithm)
+  signer.update('(request-target): post /activitypub/users/max/inbox\ndate: 2019-03-08T14:35:45.759Z\nhost: democracy-app.de\ncontent-type: application/json')
+  return signer.sign({ key: privateKey, passphrase: 'a7dsf78sadg87ad87sfagsadg78' }, 'base64')
+}
