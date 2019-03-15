@@ -131,20 +131,12 @@ Then('the object is removed from the outbox collection of {string}', async funct
   expect(parsedResponse.orderedItems).to.not.include(object)
 })
 
-Then('I send a GET request to {string} and expect a ordered collection', () => {
-
-})
-
-Then('the activity is added to the users inbox collection', async function () {
-
-})
-
-Then('the post with id {string} has been liked by {string}', async function (id, slug) {
+Then('the post with id {string} has been liked by {string}', async function (objectId, slug) {
   let result
   do {
     result = await client.request(`
     query {
-      Post(id: "${id}") {
+      Post(objectId: "${objectId}") {
         shoutedBy {
           slug
         }
@@ -155,4 +147,21 @@ Then('the post with id {string} has been liked by {string}', async function (id,
 
   expect(result.Post[0].shoutedBy).to.be.an('array').that.is.not.empty // eslint-disable-line
   expect(result.Post[0].shoutedBy[0].slug).to.equal(slug)
+})
+
+Then('the post with id {string} to be deleted', async function (objectId) {
+  let result
+  do {
+    const query = `
+      query {
+        Post(objectId: "${objectId}") {
+          title
+        }
+      }
+    `
+    console.log(`query = ${query}`)
+    result = await client.request(query)
+  } while (result.Post.length > 1)
+
+  expect(result.Post).to.be.an('array').that.is.empty // eslint-disable-line
 })
