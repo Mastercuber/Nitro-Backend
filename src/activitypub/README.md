@@ -1,7 +1,7 @@
 The ActivityPub service has the following abilities:
-* receiving __*Article*__ and __*Note*__ Objects at a users inbox
-* receiving __*Like*__ and __*Follow*__ Activities at a users inbox
-* receiving __*Undo*__ and __*Delete*__ Activities for Articles and Notes at a users inbox
+* receiving public addressed __*Article*__ and __*Note*__ Objects
+* receiving __*Like*__ and __*Follow*__ Activities
+* receiving __*Undo*__ and __*Delete*__ Activities for Articles and Notes
 * serving __*Webfinger*__ records and __*Actor*__ Objects
 * serving __*Followers*__, __*Following*__ and __*Outbox*__ collections
 
